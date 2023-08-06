@@ -1,0 +1,473 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+
+namespace desktopapp
+{
+    public partial class Form1 : Form
+    {
+        private string connectionString = "Data Source=DESKTOP-NA5EAF7\\SQLEXPRESS;Initial Catalog=ClientAccounts;Integrated Security=True";
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        
+        private void UpdateTotal()
+        {
+            string query = "SELECT (SELECT SUM(cin_money) FROM Cashin) - (SELECT SUM(cout_money) FROM Cashout) " +
+                "AS Difference;";
+            
+
+            // Create a SqlConnection and SqlCommand to execute the query
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+
+                try
+                {
+                    connection.Open();
+                    object result = command.ExecuteScalar();
+                    if (result != DBNull.Value && result != null)
+                    {
+                        decimal total = Convert.ToDecimal(result);
+                        //Console.WriteLine("Total: " + total);
+                        textBox2.Text = total.ToString();
+                    }
+                    else
+                    {
+                        textBox2.Text = "0"; // Set to default value or any appropriate message
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle any exceptions that might occur during database connection or query execution
+                    MessageBox.Show("Error updating total: " + ex.Message);
+                }
+            }
+
+        }
+        private void UpdateBankDifference()
+        {
+            string query = "SELECT (SELECT SUM(bin_money) FROM Bankin) - (SELECT SUM(bout_money) FROM Bankout) AS Difference;";
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                SqlCommand command = new SqlCommand(query, connection);
+
+                try
+                {
+                    connection.Open();
+                    object result = command.ExecuteScalar();
+                    if (result != DBNull.Value && result != null)
+                    {
+                        decimal difference = Convert.ToDecimal(result);
+                        // Assuming you have a label named lblBankDifference to display the result:
+                        textBox1.Text = difference.ToString();
+                    }
+                    else
+                    {
+                        textBox1.Text = "0"; // Set to default value or any appropriate message
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error updating bank difference: " + ex.Message);
+                }
+            }
+        }
+        private void UpdateClientCmoney()
+        {
+            string queryTotalCash = "SELECT SUM(cin_money - cout_money) AS TotalCash FROM Cashin LEFT JOIN Cashout ON Cashin.client_id = Cashout.client_id;";
+            string queryTotalBank = "SELECT SUM(bin_money - bout_money) AS TotalBank FROM Bankin LEFT JOIN Bankout ON Bankin.client_id = Bankout.client_id;";
+            string queryTotalclient = "SELECT SUM(cmoney) AS Totalcmoney FROM Client ;";
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                SqlCommand commandTotalCash = new SqlCommand(queryTotalCash, connection);
+                SqlCommand commandTotalBank = new SqlCommand(queryTotalBank, connection);
+                SqlCommand commandTotalclient = new SqlCommand(queryTotalclient, connection);
+
+                try
+                {
+                    connection.Open();
+                    object resultTotalCash = commandTotalCash.ExecuteScalar();
+                    object resultTotalBank = commandTotalBank.ExecuteScalar();
+                    object resultTotalclient = commandTotalclient.ExecuteScalar();
+
+                    decimal totalCash = resultTotalCash != DBNull.Value && resultTotalCash != null ? Convert.ToDecimal(resultTotalCash) : 0;
+                    decimal totalBank = resultTotalBank != DBNull.Value && resultTotalBank != null ? Convert.ToDecimal(resultTotalBank) : 0;
+                    decimal totalclient = resultTotalclient != DBNull.Value && resultTotalclient != null ? Convert.ToDecimal(resultTotalclient) : 0;
+
+                    decimal totalDebt = totalCash + totalBank + totalclient ;
+
+                    //Console.WriteLine("Total Debt: " + totalDebt);
+                        textBox3.Text = totalDebt.ToString();
+                    }
+                    else
+                    {
+                        textBox3.Text = "0"; // Set to default value or any appropriate message
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle any exceptions that might occur during database connection or query execution
+                    MessageBox.Show("Error updating totalDebt: " + ex.Message);
+                }
+            }
+
+        }
+
+
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            SqlConnection con = new SqlConnection(connectionString);
+            con.Open();
+            if (con.State==System.Data.ConnectionState.Open)
+            {
+                string sql = "insert into Client(cname,cmoney)values('"+txtname.Text.ToString()+"','"+txtmoney.Text.ToString()+"')";
+                SqlCommand cmd = new SqlCommand(sql, con);
+                cmd.ExecuteNonQuery();  
+                MessageBox.Show("success..!");
+
+            }
+        }
+        private void button4_Click(object sender, EventArgs e)
+        {
+            SqlConnection con = new SqlConnection(connectionString);
+            con.Open();
+            if (con.State == System.Data.ConnectionState.Open)
+            {
+                string sql = "insert into Bankout(bout_name,bout_money,bout_notes,bout_date)values('" + txtname.Text.ToString() + "','" + textmoney.Text.ToString() + "','" + textnotes.Text.ToString() + "','" + textdate.Text.ToString() + "')";
+ 
+                SqlCommand cmd = new SqlCommand(sql, con);
+                cmd.ExecuteNonQuery();
+                MessageBox.Show("success..!");
+
+            }
+        }
+        private void button10_Click(object sender, EventArgs e)
+        {
+            SqlConnection con = new SqlConnection(connectionString);
+            con.Open();
+            if (con.State == System.Data.ConnectionState.Open)
+            {
+                string sql = "insert into Bankin(client_id,bin_money,bin_notes,bin_date)values('" + comboBox2.Text.ToString() + "','" + textmoney1.Text.ToString() + "','" + textnotes1.Text.ToString() + "','" + textdate1.Text.ToString() + "')";
+                SqlCommand cmd = new SqlCommand(sql, con);
+                cmd.ExecuteNonQuery();
+                MessageBox.Show("success..!");
+
+            }
+        }
+
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pictureBox1_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void richTextBox3_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabPage1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox1_TextChanged_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label6_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
+        
+        private void groupBox2_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label14_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabPage2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label8_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox4_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox4_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox8_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox2_Enter_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label24_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void label25_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dataGridView2_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void label26_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox6_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox7_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel2_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void label25_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label28_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tb_search_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label29_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox19_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label30_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dataGridView6_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void dataGridView4_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void label31_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox20_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dateTimePicker5_ValueChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dateTimePicker6_ValueChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox9_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox8_TextChanged_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox7_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox4_Enter_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox2_Enter_2(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel10_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void textBox24_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void textBox21_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label44_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label18_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void comboBox4_SelectedIndexChanged(object sender, EventArgs e)
+        {
+           
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            // TODO: This line of code loads data into the 'clientAccountsDataSet1.Client' table. You can move, or remove it, as needed.
+            this.clientTableAdapter1.Fill(this.clientAccountsDataSet1.Client);
+            // TODO: This line of code loads data into the 'clientAccountsDataSet.Client' table. You can move, or remove it, as needed.
+            this.clientTableAdapter.Fill(this.clientAccountsDataSet.Client);
+            UpdateTotal();
+            UpdateBankDifference();
+            UpdateClientCmoney();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            SqlConnection con = new SqlConnection(connectionString);
+            con.Open();
+            if (con.State == System.Data.ConnectionState.Open)
+            {
+                string sql = "insert into Cashout(coutname,coutmoney,coutnotes,coutdate)values('" + comboBox4.Text.ToString() + "','" + txtmoney.Text.ToString() + "','" + textBox7.Text.ToString() + "','" + dateTimePicker6.Text.ToString()+ "')";
+                SqlCommand cmd = new SqlCommand(sql, con);
+                cmd.ExecuteNonQuery();
+                MessageBox.Show("success..!");
+
+            }
+        }
+
+        private void comboBox5_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox2_TextChanged(object sender, EventArgs e)
+        {
+            UpdateTotal();
+        }
+
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateTotal();
+        }
+    }
+}
